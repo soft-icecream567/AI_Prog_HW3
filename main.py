@@ -13,10 +13,12 @@ plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'PingFang SC']
 
 #1.1数据读取
 
-raw_data=pd.read_csv('ICData.csv',sep='\t')
+raw_data=pd.read_csv('ICData.csv',sep=',')#使用‘，’分割数据，得到首标题
+#打印数据集前五行
 print("\n 数据集前五行为：")
 print(raw_data.head())
-
+print(raw_data.columns.tolist())
+#打印数据集基本信息
 print("\n数据集基本信息：")
 print(f"数据行数：{raw_data.shape[0]} 行")
 print(f"数据列数：{raw_data.shape[1]} 列")
@@ -24,13 +26,35 @@ print("\n各列数据类型：")
 print(raw_data.dtypes)
 
 #1.2 时间解析
-#使用 pd.to_datetime 转换，format ,让时间输出格式更加清晰
-raw_data["交易时间"]=pd.to_datatime(raw_data['交易时间'],format='%Y/%m/%d %H:%M')
+#人工智能生成核心代码
+#使用 pd.to_datetime 转换，打印时间
+raw_data["交易时间"]=pd.to_datetime(raw_data['交易时间'])
 
 # 从交易时间中提取小时（整数 0~23），新增为 'hour' 列
 raw_data['hour'] = raw_data['交易时间'].dt.hour
 
-print("打印新增hour列：")
+print("打印新增hour列前五行：")
 print(raw_data[['交易时间','hour']].head())#后续时间分析必须依赖hour
 
+
+#1.3 构造衍生字段-搭乘站点数
+#人工智能生成核心代码
+#确保上下车站点为数值类型，errors设置防止出现的错误引发程序崩溃
+raw_data['上车站点'] = pd.to_numeric(raw_data['上车站点'], errors='coerce')
+raw_data['下车站点'] = pd.to_numeric(raw_data['下车站点'], errors='coerce')
+
+#计算搭乘站点数：两站点序号之差的绝对值
+raw_data['ride_stops'] = (raw_data['下车站点'] - raw_data['上车站点']).abs()
+
+# 记录删除前的行数，用于后续打印
+rows_before_drop = len(raw_data)
+
+#保留ride_stops不为0 的行
+clean_data = raw_data[raw_data['ride_stops'] != 0]
+
+rows_after_drop = len(clean_data)
+deleted_rows = rows_before_drop - rows_after_drop
+
+print(f"\n删除 ride_stops = 0 的异常记录数：{deleted_rows} 行")
+print(f"删除后数据集剩余：{rows_after_drop} 行")
 
