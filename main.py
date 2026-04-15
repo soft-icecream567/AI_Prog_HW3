@@ -151,3 +151,26 @@ plt.savefig('Task2_24小时刷卡量分布可视化.png')
 plt.close()   # 关闭当前图像，释放内存
 
 
+#Task3：路线站点分析
+#AI生成核心代码
+
+#3.1 定义函数并计算各线路平均搭乘点数目
+
+#函数定义
+#函数用来计算平均搭乘点和标准差
+def analyze_route_stops(df, route_col='线路号', stops_col='ride_stops'):
+    
+    # 按线路号分组，对搭乘站点数求平均值和标准差
+    grouped_stats = df.groupby(route_col)[stops_col].agg(['mean', 'std']).reset_index()
+    # 重命名列，使其符合返回要求
+    grouped_stats.columns = [route_col, 'mean_stops', 'std_stops']
+    # 按平均搭乘站点数降序排序
+    result_df = grouped_stats.sort_values('mean_stops', ascending=False).reset_index(drop=True)
+    return result_df
+
+route_stop_stats=analyze_route_stops(clean_data)
+
+print("\n 前10行各线路平均搭乘点数：")
+print(route_stop_stats.head(10))
+
+#3.2 使用seaborn barplot绘制
