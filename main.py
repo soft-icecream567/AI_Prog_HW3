@@ -12,8 +12,14 @@ plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'PingFang SC']
 #Task1:数据预处理
 
 #1.1数据读取
-df=pd.read_csv('ICData.csv',sep='\t')
-print("\n 数据集前五行为：")
-print(df.head())
 
-print(df.head())
+raw_data=pd.read_csv('ICData.csv',sep='\t')
+print("\n 数据集前五行为：")
+print(raw_data.head())
+
+print("\n数据集基本信息：")
+print(f"数据行数：{raw_data.shape[0]} 行")
+print(f"数据列数：{raw_data.shape[1]} 列")
+print("\n各列数据类型：")
+print(raw_data.dtypes)
+
