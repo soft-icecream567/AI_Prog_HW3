@@ -59,6 +59,7 @@ print(f"\n删除 ride_stops = 0 的异常记录数：{deleted_rows} 行")
 print(f"删除后数据集剩余：{rows_after_drop} 行")
 
 #1.4缺失值检查与处理
+
 print("\n各列缺失值数量统计：")
 print(clean_data.isnull().sum())
 
@@ -67,3 +68,32 @@ key_columns = ['交易时间', 'hour', 'ride_stops', '线路号', '上车站点'
 clean_data = clean_data.dropna(subset=key_columns)#查询缺失数据
 
 print(f"\n缺失值处理后最终数据行数：{len(clean_data)} 行")
+
+
+#Task2：时间分布分析
+
+#2.1 早晚时段刷卡量统计
+
+#人工智能核心代码
+#筛选删除个刷卡记录
+boarding_data = clean_data[clean_data['刷卡类型'] == 0].copy()
+print(f"上车刷卡总记录数：{len(boarding_data)} 条")
+
+#使用numpy bool索引统计早晚时段
+# 将 hour 列转换为 numpy 数组（必须使用 numpy 完成统计）
+hour_array = boarding_data['hour'].values
+
+# 早峰前：hour < 7
+is_early_morning = hour_array < 7 
+early_count = np.sum(is_early_morning)   # np.sum 对布尔数组求和，True=1，False=0
+
+# 深夜：hour >= 22
+is_late_night = hour_array >= 22
+late_count = np.sum(is_late_night)
+
+total_boarding_count = len(boarding_data)#计算总数方便输出占比
+
+#输出刷卡量和占比
+print(f"\n早峰前时段 (<7:00) 刷卡量：{early_count} 次，占比 {early_count/total_boarding_count:.2%}")
+print(f"深夜时段 (≥22:00) 刷卡量：{late_count} 次，占比 {late_count/total_boarding_count:.2%}")
+
