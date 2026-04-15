@@ -97,3 +97,57 @@ total_boarding_count = len(boarding_data)#计算总数方便输出占比
 print(f"\n早峰前时段 (<7:00) 刷卡量：{early_count} 次，占比 {early_count/total_boarding_count:.2%}")
 print(f"深夜时段 (≥22:00) 刷卡量：{late_count} 次，占比 {late_count/total_boarding_count:.2%}")
 
+#2.2 24小时刷卡量可视化（使用matplotlib）
+# 按小时统计上车刷卡量
+hourly_boarding_counts = boarding_data.groupby('hour').size()
+
+#确保 0~23 每个小时都有值
+full_hour_index = range(24)
+#缺失的小时补 0
+hourly_boarding_counts = hourly_boarding_counts.reindex(full_hour_index, fill_value=0)
+
+#人工智能输出核心代码
+
+# 创建颜色列表：早峰前 (<7) 和深夜 (>=22) 用橙色高亮，其余用蓝色
+bar_colors = []
+for hour_value in full_hour_index:
+    if hour_value < 7 or hour_value >= 22:
+        bar_colors.append('orange')      # 高亮颜色
+    else:
+        bar_colors.append('steelblue')   # 非高光颜色
+#其中注意在Task1 前的准备工作已完成中文、负号的输出格式优化
+
+# 绘图图形大小设置
+plt.figure(figsize=(12, 6))
+
+# 绘制柱状图：x 轴为小时 0~23，y 轴为对应刷卡量，颜色按 bar_colors 列表
+plt.bar(hourly_boarding_counts.index, hourly_boarding_counts.values, 
+        color=bar_colors, edgecolor='black', linewidth=0.5)#对宽度 边框颜色也进行设置，优化输出
+
+# 添加标题和坐标轴标签（中文）
+plt.title('24小时公交上车刷卡量分布', fontsize=16)
+plt.xlabel('小时', fontsize=12)
+plt.ylabel('刷卡量（次）', fontsize=12)
+
+# 设置 x 轴刻度：显示 0,2,4,...,22，步长为2
+plt.xticks(ticks=range(0, 24, 2), labels=range(0, 24, 2))
+
+# 添加水平网格线（只对 y 轴方向，便于阅读数值）
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+# 手动创建图例（因为颜色是手动指定的，需要自定义图例句柄）
+from matplotlib.patches import Patch
+legend_handles = [
+    Patch(facecolor='orange', label='早峰前/深夜时段'),
+    Patch(facecolor='steelblue', label='其余时段')
+]
+plt.legend(handles=legend_handles)
+
+# 自动调整布局，防止标签被裁剪
+plt.tight_layout()
+
+# 保存图像
+plt.savefig('Task2_24小时刷卡量分布可视化.png')
+plt.close()   # 关闭当前图像，释放内存
+
+
