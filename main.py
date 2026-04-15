@@ -175,39 +175,78 @@ print(route_stop_stats.head(10))
 
 #3.2 使用seaborn barplot 可视化各线路平均搭乘点和标准差
 
-# ---------- 3.2 Seaborn 水平条形图（取前15条线路） ----------
-# 取平均搭乘站点数最高的前15条线路
-top15_routes = route_stop_stats.head(15).copy()
+# 获取均值最高的前15条线路编号（按均值降序）
+top15_route_ids = route_stop_stats.head(15)['线路号'].tolist()
 
-# 按均值升序排列，使水平条形图从上到下递减
-top15_routes_sorted = top15_routes.sort_values('mean_stops', ascending=True)
+# 从清洗后的数据中筛选出这些线路的记录
+data_top15 = clean_data[clean_data['线路号'].isin(top15_route_ids)].copy()
 
-# 线路号转为字符串，避免被当作数值排序
-top15_routes_sorted['线路号'] = top15_routes_sorted['线路号'].astype(str)
+# 将线路号转为字符串，避免 seaborn 将其视为数值
+data_top15['线路号'] = data_top15['线路号'].astype(str)
+
+# 指定水平条形图的显示顺序：均值从高到低在图上对应从上到下（即 y 轴反向）
+order_for_plot = [str(route) for route in top15_route_ids[::-1]]
 
 plt.figure(figsize=(10, 8))
 
-# 使用 seaborn 水平条形图，误差棒显示标准差，capsize=0.3
 sns.barplot(
-    data=top15_routes_sorted,
-    x='mean_stops',
+    data=data_top15,
+    x='ride_stops',
     y='线路号',
-    errorbar='sd',                 # 误差棒采用标准差（与预计算一致）
-    capsize=0.3,                   # 误差棒端帽长度
-    palette='Blues_d',             # 调色板调色成Blues_d
+    order=order_for_plot,
+    errorbar='sd',   # 设置误差棒
+    capsize=0.3,    # 设置capsize
+    palette='Blues_d',  #使用palette调色板设置渐变色
     edgecolor='black',
-    linewidth=0.5
+    linewidth=0.5   #线宽，使可视化更清晰
 )
-
+#设置图例
 plt.xlabel('平均搭乘站点数', fontsize=12)
 plt.ylabel('线路号', fontsize=12)
 plt.title('各线路平均搭乘站点数 Top 15（含标准差）', fontsize=14)
-plt.xlim(0, top15_routes_sorted['mean_stops'].max() * 1.15)
+#设置合适图例比例
+plt.xlim(0, data_top15['ride_stops'].max() * 0.5)
 plt.grid(axis='x', linestyle='--', alpha=0.6)
-
+#保存图片
 plt.tight_layout()
 plt.savefig('Task3_平均站点数与标准差可视化_seaborn.png', dpi=150)
 plt.close()
 
 
+
+
+#Task4: 高峰小时系数计算
+
+#4.1 识别高峰小时
+# 利用前面 boarding_data，按小时统计刷卡总量
+hourly_total_boarding = boarding_data.groupby('hour').size()
+
+# 利用indxmax 找出刷卡量最大的小时
+peak_hour_value = hourly_total_boarding.idxmax()
+peak_hour_volume = hourly_total_boarding.max()
+
+print(f"\n高峰小时为 {peak_hour_value}:00 ~ {peak_hour_value+1}:00，刷卡量 {peak_hour_volume} 次")
+
+#4.2 提取高峰小时内数据
+#AI生成核心代码
+
+#筛选出该小时内的所有上车记录
+peak_hour_data = boarding_data[boarding_data['hour'] == peak_hour_value].copy()
+#以交易时间为索引，方便后面使用resample进行时间索引
+peak_hour_data = peak_hour_data.set_index('交易时间').sort_index()
+
+#4.3 5分钟粒度统计
+five_minute_counts = peak_hour_data.resample('5min').size()
+
+# 找出最大的5分钟刷卡量
+max_5min_volume = five_minute_counts.max()
+max_5min_start_time = five_minute_counts.idxmax()  #找出最大五分钟刷卡量的起始时间
+
+# 计算窗口结束时间（起始时间 + 5分钟）
+max_5min_end_time = max_5min_start_time + pd.Timedelta(minutes=5)
+
+# 计算 PHF5 = 高峰小时总刷卡量 / (12 × 最大5分钟刷卡量)
+PHF5_value = peak_hour_volume / (12 * max_5min_volume)
+print(f"最大5分钟刷卡量（{max_5min_start_time.strftime('%H:%M')}~{max_5min_end_time.strftime('%H:%M')}）：{max_5min_volume} 次")
+print(f"PHF5 = {peak_hour_volume} / (12 × {max_5min_volume}) = {PHF5_value:.4f}")
 
