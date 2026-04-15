@@ -250,3 +250,17 @@ PHF5_value = peak_hour_volume / (12 * max_5min_volume)
 print(f"最大5分钟刷卡量（{max_5min_start_time.strftime('%H:%M')}~{max_5min_end_time.strftime('%H:%M')}）：{max_5min_volume} 次")
 print(f"PHF5 = {peak_hour_volume} / (12 × {max_5min_volume}) = {PHF5_value:.4f}")
 
+#4.4 15分钟粒度统计
+# 找出最大的15分钟刷卡量
+fifteen_minute_counts = peak_hour_data.resample('15min').size()
+
+max_15min_volume = fifteen_minute_counts.max()
+max_15min_start_time = fifteen_minute_counts.idxmax()
+# 计算窗口结束时间（起始时间 + 15分钟）
+max_15min_end_time = max_15min_start_time + pd.Timedelta(minutes=15)
+
+# 计算 PHF15 = 高峰小时总刷卡量 / (4× 最大15分钟刷卡量)
+PHF15_value = peak_hour_volume / (4 * max_15min_volume)
+
+print(f"最大15分钟刷卡量（{max_15min_start_time.strftime('%H:%M')}~{max_15min_end_time.strftime('%H:%M')}）：{max_15min_volume} 次")
+print(f"PHF15 = {peak_hour_volume} / (4 × {max_15min_volume}) = {PHF15_value:.4f}")
