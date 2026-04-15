@@ -147,7 +147,7 @@ plt.legend(handles=legend_handles)
 plt.tight_layout()
 
 # 保存图像
-plt.savefig('Task2_24小时刷卡量分布可视化.png')
+plt.savefig('Task2_24小时刷卡量分布可视化.png',dpi=150)
 plt.close()   # 关闭当前图像，释放内存
 
 
@@ -173,4 +173,41 @@ route_stop_stats=analyze_route_stops(clean_data)
 print("\n 前10行各线路平均搭乘点数：")
 print(route_stop_stats.head(10))
 
-#3.2 使用seaborn barplot绘制
+#3.2 使用seaborn barplot 可视化各线路平均搭乘点和标准差
+
+# ---------- 3.2 Seaborn 水平条形图（取前15条线路） ----------
+# 取平均搭乘站点数最高的前15条线路
+top15_routes = route_stop_stats.head(15).copy()
+
+# 按均值升序排列，使水平条形图从上到下递减
+top15_routes_sorted = top15_routes.sort_values('mean_stops', ascending=True)
+
+# 线路号转为字符串，避免被当作数值排序
+top15_routes_sorted['线路号'] = top15_routes_sorted['线路号'].astype(str)
+
+plt.figure(figsize=(10, 8))
+
+# 使用 seaborn 水平条形图，误差棒显示标准差，capsize=0.3
+sns.barplot(
+    data=top15_routes_sorted,
+    x='mean_stops',
+    y='线路号',
+    errorbar='sd',                 # 误差棒采用标准差（与预计算一致）
+    capsize=0.3,                   # 误差棒端帽长度
+    palette='Blues_d',             # 调色板调色成Blues_d
+    edgecolor='black',
+    linewidth=0.5
+)
+
+plt.xlabel('平均搭乘站点数', fontsize=12)
+plt.ylabel('线路号', fontsize=12)
+plt.title('各线路平均搭乘站点数 Top 15（含标准差）', fontsize=14)
+plt.xlim(0, top15_routes_sorted['mean_stops'].max() * 1.15)
+plt.grid(axis='x', linestyle='--', alpha=0.6)
+
+plt.tight_layout()
+plt.savefig('Task3_平均站点数与标准差可视化_seaborn.png', dpi=150)
+plt.close()
+
+
+
