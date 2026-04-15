@@ -58,3 +58,12 @@ deleted_rows = rows_before_drop - rows_after_drop
 print(f"\n删除 ride_stops = 0 的异常记录数：{deleted_rows} 行")
 print(f"删除后数据集剩余：{rows_after_drop} 行")
 
+#1.4缺失值检查与处理
+print("\n各列缺失值数量统计：")
+print(clean_data.isnull().sum())
+
+#处理策略：若存在缺失值，由于数据量较大，删除部分值不影响数据分析，因此直接删除对应行
+key_columns = ['交易时间', 'hour', 'ride_stops', '线路号', '上车站点', '下车站点']
+clean_data = clean_data.dropna(subset=key_columns)#查询缺失数据
+
+print(f"\n缺失值处理后最终数据行数：{len(clean_data)} 行")
