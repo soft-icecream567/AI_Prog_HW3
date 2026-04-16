@@ -13,7 +13,13 @@ plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'PingFang SC']
 
 #1.1数据读取
 
-raw_data=pd.read_csv('ICData.csv',sep=',')#使用‘，’分割数据，得到首标题
+raw_data = pd.read_csv(
+    'ICData.csv',
+    sep=',',
+    dtype=str,                # 全部读为字符串，避免任何自动类型推断
+    skipinitialspace=True,    # 跳过逗号后的空格
+    encoding='utf-8'
+)
 #打印数据集前五行
 print("\n 数据集前五行为：")
 print(raw_data.head())
@@ -29,6 +35,12 @@ print(raw_data.dtypes)
 #人工智能生成核心代码
 #使用 pd.to_datetime 转换，打印时间
 raw_data["交易时间"]=pd.to_datetime(raw_data['交易时间'])
+
+# 上车站点、下车站点、刷卡类型、小时等转为数值
+raw_data['上车站点'] = pd.to_numeric(raw_data['上车站点'], errors='coerce')
+raw_data['下车站点'] = pd.to_numeric(raw_data['下车站点'], errors='coerce')
+raw_data['刷卡类型'] = pd.to_numeric(raw_data['刷卡类型'], errors='coerce')
+raw_data['hour'] = raw_data['交易时间'].dt.hour
 
 # 从交易时间中提取小时（整数 0~23），新增为 'hour' 列
 raw_data['hour'] = raw_data['交易时间'].dt.hour
@@ -67,6 +79,10 @@ print(clean_data.isnull().sum())
 key_columns = ['交易时间', 'hour', 'ride_stops', '线路号', '上车站点', '下车站点']
 clean_data = clean_data.dropna(subset=key_columns)#查询缺失数据
 
+invalid_ids = ['', 'nan', 'NaN', 'None', '0', '0.0']
+clean_data = clean_data[~clean_data['驾驶员编号'].isin(invalid_ids)]
+clean_data = clean_data[~clean_data['线路号'].isin(invalid_ids)]
+clean_data = clean_data[~clean_data['车辆编号'].isin(invalid_ids)]
 print(f"\n缺失值处理后最终数据行数：{len(clean_data)} 行")
 
 
@@ -147,7 +163,7 @@ plt.legend(handles=legend_handles)
 plt.tight_layout()
 
 # 保存图像
-plt.savefig('Task2_24小时刷卡量分布可视化.png',dpi=150)
+plt.savefig('hour_distribution.png',dpi=150)
 plt.close()   # 关闭当前图像，释放内存
 
 
@@ -209,7 +225,7 @@ plt.xlim(0, data_top15['ride_stops'].max() * 0.5)
 plt.grid(axis='x', linestyle='--', alpha=0.6)
 #保存图片
 plt.tight_layout()
-plt.savefig('Task3_平均站点数与标准差可视化_seaborn.png', dpi=150)
+plt.savefig('route_stops.png', dpi=150)
 plt.close()
 
 
@@ -265,4 +281,123 @@ PHF15_value = peak_hour_volume / (4 * max_15min_volume)
 print(f"最大15分钟刷卡量（{max_15min_start_time.strftime('%H:%M')}~{max_15min_end_time.strftime('%H:%M')}）：{max_15min_volume} 次")
 print(f"PHF15 = {peak_hour_volume} / (4 × {max_15min_volume}) = {PHF15_value:.4f}")
 
+
+#Task5：路线驾驶员信息批量导出
+
+#复制一份数据，防止task5对数据产生污染
+clean_data_backup = clean_data.copy()
+#5.1 筛选线路号在 1101 至 1120 之间的所有记录
+
+target_line_numbers = [str(i) for i in range(1101, 1121)]  # 改为字符串
+filtered_line_data = clean_data[clean_data['线路号'].isin(target_line_numbers)]
+print(f"筛选到 {len(filtered_line_data)} 条记录，涉及线路数：{filtered_line_data['线路号'].nunique()} 条")
+
+#5.2创建输出文件夹 
+
+output_folder = '线路驾驶员信息'
+os.makedirs(output_folder, exist_ok=True) 
+#AI 生成核心代码
+
+#5.3 按路线号分组并输出路线驾驶员信息txt
+
+for line_number in target_line_numbers:
+    # 提取该线路的所有记录
+    single_line_data = filtered_line_data[filtered_line_data['线路号'] == line_number]
+    
+    if single_line_data.empty:
+        print(f"警告：线路 {line_number} 无数据，跳过")
+        continue
+    
+    # 选取「车辆编号」和「驾驶员编号」两列，并去重
+    vehicle_driver_pairs = single_line_data[['车辆编号', '驾驶员编号']].drop_duplicates()
+    
+    # 将驾驶员编号转为字符串，防止写入时变成科学计数法
+    vehicle_driver_pairs['驾驶员编号'] = vehicle_driver_pairs['驾驶员编号'].astype(str)
+    
+    # 构造文件路径
+    txt_file_path = os.path.join(output_folder, f'{line_number}.txt')
+    
+    # 写入文件
+    with open(txt_file_path, 'w', encoding='utf-8') as file_handle:
+        file_handle.write(f'线路号: {line_number}\n')
+        file_handle.write('车辆编号 驾驶员编号\n')
+        for _, row_data in vehicle_driver_pairs.iterrows():
+            file_handle.write(f"{row_data['车辆编号']} {row_data['驾驶员编号']}\n")
+    
+    print(f"已生成：{txt_file_path}")
+
+print(f"\n所有 txt 文件已保存至文件夹：{os.path.abspath(output_folder)}")
+
+
+#Task6：服务绩效排名与可视化——热力图
+
+
+#6.1 统计各维度 Top10
+top10_drivers = clean_data_backup['驾驶员编号'].value_counts().head(10)
+top10_routes = clean_data_backup['线路号'].value_counts().head(10)
+top10_stops = clean_data_backup['上车站点'].value_counts().head(10)
+top10_vehicles = clean_data_backup['车辆编号'].value_counts().head(10)
+
+print("\n>>> Top 10 司机（驾驶员编号）：")
+print(top10_drivers)
+print("\n>>> Top 10 线路：")
+print(top10_routes)
+print("\n>>> Top 10 上车站点：")
+print(top10_stops)
+print("\n>>> Top 10 车辆：")
+print(top10_vehicles)
+
+#6.2 热力图可视化
+def series_to_fixed_length_list(series_obj, length=10):
+    """将 Series 转为指定长度的列表，不足补0，超过截断"""
+    value_list = series_obj.tolist()
+    if len(value_list) < length:
+        value_list += [0] * (length - len(value_list))
+    return value_list[:length]
+
+# 构建 4 行 10 列的矩阵，每一行对应一个维度
+heatmap_data_matrix = np.array([
+    series_to_fixed_length_list(top10_drivers),
+    series_to_fixed_length_list(top10_routes),
+    series_to_fixed_length_list(top10_stops),
+    series_to_fixed_length_list(top10_vehicles)
+])
+
+# 行标签（维度名称）和列标签（Top1~Top10）
+dimension_labels = ['司机', '线路', '上车站点', '车辆']
+rank_labels = [f'Top{i+1}' for i in range(10)]
+
+# ---------- 6.3 绘制 seaborn 热力图 ----------
+plt.figure(figsize=(12, 6))
+sns.heatmap(heatmap_data_matrix, 
+            annot=True,           # 在每个格子中显示数值
+            fmt='d',              # 数值格式为整数
+            cmap='YlOrRd',        # 颜色映射（黄-橙-红）
+            xticklabels=rank_labels,
+            yticklabels=dimension_labels,
+            linewidths=0.5,
+            linecolor='gray',
+            cbar_kws={'label': '服务人次'})   # 颜色条标签
+
+plt.title('服务绩效 Top10 热力图\n(司机·线路·上车站点·车辆)', fontsize=14)
+plt.xlabel('排名', fontsize=12)
+plt.ylabel('维度', fontsize=12)
+plt.xticks(rotation=0)   # x轴标签不旋转
+
+plt.tight_layout()
+plt.savefig('performance_heatmap.png', dpi=150, bbox_inches='tight')
+plt.close()
+
+print("\n>>> 热力图已保存为 performance_heatmap.png")
+
+# 结论说明
+print("\n>>> 热力图结论说明：")
+print(
+    "从热力图中可观察到以下服务绩效规律：\n"
+    "1. 司机维度：编号为 1599 的司机服务人次最高，为 1334 次，远超其他司机。\n"
+    "2. 线路维度：线路 1101 服务人次最多，达到 3782 次，是高峰线路。\n"
+    "3. 上车站点：站点 1 服务 6722 人次，遥遥领先，为高峰站点。\n"
+    "4. 车辆维度：车辆 9132 服务人次最高，为 1353 次，头部集中现象明显。\n"
+    "综上，公交系统在司机、线路、站点、车辆层面均存在显著的头部集中现象。"
+)
 
